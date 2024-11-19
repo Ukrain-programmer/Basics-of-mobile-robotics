@@ -70,20 +70,21 @@ class ThymioController:
         Disconnect from the Thymio robot and close the client connection.
         """
         if self.node:
-            aw(self.node.lock())
+            self.stop()
+            aw(self.node.unlock())
 
         if self.client:
             self.client.close()
             print("Disconnected from Thymio.")
 
 
-#Usage example
+# Usage example
 # if __name__ == "__main__":
 #     thymio = ThymioController()
 #     try:
 #         thymio.connect(timeout=5)
-#         thymio.set_speed(100, 200)
-#         time.sleep(5)
-#         thymio.stop()
+#         thymio.set_speed(0, 0)
+#         # time.sleep(5)
+#         # thymio.stop()
 #     finally:
 #         thymio.disconnect()
