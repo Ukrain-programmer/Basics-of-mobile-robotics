@@ -84,50 +84,28 @@ class ThymioController:
             print("Disconnected from Thymio.")
 
 
-    def move_forward(self, speed=200):
-        """
-        Move the Thymio robot forward at a given speed.
-        """
-        self.set_speed(speed, speed)
-
-    def move_backward(self, speed=200):
-        """
-        Move the Thymio robot backward at a given speed.
-        """
-        self.set_speed(-speed, -speed)
-
-    def turn_left(self, speed=200):
-        """
-        Turn the Thymio robot left at a given speed.
-        """
-        self.set_speed(-speed, speed)
-
-    def turn_right(self, speed=200):
-        """
-        Turn the Thymio robot right at a given speed.
-        """
+    def turn_right(self, speed = 200):
         self.set_speed(speed, -speed)
+        time.sleep(1.1)
+        self.stop()
 
-    def set_turn_speed(self, angular_velocity):
-        """
-        Adjusts the speed of turning based on the robot's angular velocity.
-        """
-        max_speed = 500
-        max_angular_velocity = math.pi  # Full turn in one second (radians)
-        # Convert angular velocity to motor speed
-        left_speed = int(max_speed * (1 - angular_velocity / max_angular_velocity))
-        right_speed = int(max_speed * (1 + angular_velocity / max_angular_velocity))
-        self.set_speed(left_speed, right_speed)
+    def turn_left(self, speed = 200):
+        self.set_speed(-speed, speed)
+        time.sleep(1.1)
+        self.stop()
 
 
 
 
 
-# Usage example
+
+
 # if __name__ == "__main__":
-#     thymio = ThymioController()
-#
+#     try:
+#         thymio = ThymioController()
 #         thymio.connect(timeout=5)
+#
+#         thymio.turn_right(200)
 #
 #     finally:
 #         thymio.disconnect()
