@@ -1,95 +1,126 @@
 import math
-
+import time
 from ThymioController import ThymioController
 
 
 class MotionControl:
-    def __init__(self, thymio_controller: ThymioController):
+    def __init__(self, thymio_controller, path):
         """
-        MotionControl class to handle movement control and path following.
+        Initialize the MotionControl with a ThymioController instance and a path.
+
         Args:
-            thymio_controller (ThymioController): Instance of ThymioController to control the robot.
+            thymio_controller (ThymioController): Instance of ThymioController.
+            path (list of tuples): List of waypoints [(x1, y1), (x2, y2), ...].
         """
         self.thymio = thymio_controller
+        self.path = path  # Global navigation path
+        self.current_target_index = 0  # Index of the current target in the path
+        self.current_position = path[0]  # Initial position (assume it's the first coordinate of the path)
+        self.lookahead_distance = 0.1  # Distance to look ahead for path following (adjust as needed)
+        self.speed = 100  # Base speed for the robot (adjustable)
+        self.current_axis = None  # Current axis of movement ('x' or 'y')
 
-    def move_towards_goal(self, goal_x, goal_y, current_x, current_y, current_theta, angle_tolerance=4, speed=200):
+    def compute_distance(self, pos1, pos2):
         """
-        Move the Thymio robot towards a goal position while following a straight path.
-        Arguments:
-            goal_x (float): X coordinate of the goal.
-            goal_y (float): Y coordinate of the goal.
-            current_x (float): Current X coordinate of the robot.
-            current_y (float): Current Y coordinate of the robot.
-            current_theta (float): Current orientation of the robot (in radians).
-            angle_tolerance (float): Tolerance for the angle deviation (in radians).
-            speed (int): Base speed for the robot.
+        Compute the Euclidean distance between two points.
+
+        Args:
+            pos1 (tuple): First point (x1, y1).
+            pos2 (tuple): Second point (x2, y2).
+
+        Returns:
+            float: Euclidean distance.
         """
-        # Calculate the desired angle to the goal
-        desired_angle = math.atan2(goal_y - current_y, goal_x - current_x)
+        return math.sqrt((pos2[0] - pos1[0]) ** 2 + (pos2[1] - pos1[1]) ** 2)
 
-        # Calculate the angle difference (error)
-        angle_error = desired_angle - current_theta
+    def determine_axis(self, current_pos, target_pos):
+        """
+        Determine the axis of movement between two points.
 
-        # Normalize the angle to be within -pi to pi
-        angle_error = self.wrap_angle(angle_error)
+        Args:
+            current_pos (tuple): Current position (x, y).
+            target_pos (tuple): Target position (x, y).
 
-        # Check if the robot is close enough to the target angle and should just go straight
-        if abs(angle_error) < angle_tolerance:
-            left_speed = right_speed = speed  # Move straight
+        Returns:
+            str: 'x' if moving along x-axis, 'y' if moving along y-axis, None if no movement.
+        """
+        if current_pos[0] != target_pos[0]:
+            return 'x'  # Movement along x-axis
+        elif current_pos[1] != target_pos[1]:
+            return 'y'  # Movement along y-axis
+        return None  # No movement
+
+    def rotate_to_new_axis(self, new_axis):
+        """
+        Rotate the robot to align with a new axis.
+
+        Args:
+            new_axis (str): The new axis of movement ('x' or 'y').
+        """
+        if self.current_axis is None:
+            # First movement, no need to rotate
+            self.current_axis = new_axis
+            return
+
+        if self.current_axis != new_axis:
+            # Rotate 90 degrees to align with the new axis
+            if new_axis == 'x':
+                print("Rotating to align with x-axis.")
+                self.thymio.set_speed(self.speed, -self.speed)  # Counterclockwise rotation
+            elif new_axis == 'y':
+                print("Rotating to align with y-axis.")
+                self.thymio.set_speed(-self.speed, self.speed)  # Clockwise rotation
+            time.sleep(0.5)  # Wait for rotation to complete
+            self.thymio.stop()
+            self.current_axis = new_axis  # Update the current axis
+
+    def move_to_next_target(self):
+        """
+        Move the robot towards the next target in the path, applying rotations as needed.
+        """
+        current_target = self.path[self.current_target_index]
+        distance_to_target = self.compute_distance(self.current_position, current_target)
+
+        if distance_to_target < self.lookahead_distance:
+            # Arrived at the current target
+            print(f"Arrived at target {current_target}.")
+            self.thymio.stop()
+            self.current_target_index += 1
+
+            if self.current_target_index >= len(self.path):
+                print("Path completed.")
+                return  # Path completed, stop further movement
+
+            # Determine new axis and rotate if needed
+            next_target = self.path[self.current_target_index]
+            new_axis = self.determine_axis(current_target, next_target)
+            self.rotate_to_new_axis(new_axis)
         else:
-            # If the angle error is large, adjust the robot's speed to rotate
-            left_speed = int(speed - angle_error * 200)  # Increase the factor to make turning faster
-            right_speed = int(speed + angle_error * 200)
+            # Keep moving straight towards the target
+            print(f"Moving towards target {current_target}")
+            self.thymio.set_speed(self.speed, self.speed)
 
-        # Set the robot's speed
-        self.thymio.set_speed(left_speed, right_speed)
+        # Update current position
+        self.current_position = current_target
 
-        # Return the current angle error for possible debugging or logging
-        return angle_error
-
-    def wrap_angle(self, angle):
+    def live_dynamic_local_adjustments(self):
         """
-        Normalize the angle to be between -pi and pi.
+        Placeholder for dynamic local adjustments, e.g., obstacle avoidance.
+
+        This function should be implemented later to handle dynamic changes in the environment.
         """
-        while angle > math.pi:
-            angle -= 2 * math.pi
-        while angle < -math.pi:
-            angle += 2 * math.pi
-        return angle
+        pass
 
-    def follow_path(self, path, initial_position):
+    def run(self):
         """
-        Follow the provided path towards the goal. The path is a list of (x, y) points.
-        Arguments:
-            path (list of tuples): List of (x, y) coordinates representing waypoints.
-            initial_position (tuple): The initial position (x, y, theta) of the robot.
+        Main control loop for motion control.
+
+        Continuously follow the path and handle dynamic adjustments.
         """
-        current_x, current_y, current_theta = initial_position
-        for goal_x, goal_y in path:
-            print(f"Moving towards goal: ({goal_x}, {goal_y})")
-
-            # Continue moving towards the goal until we are close enough
-            while True:
-                # Move the robot towards the goal
-                angle_error = self.move_towards_goal(goal_x, goal_y, current_x, current_y, current_theta)
-
-                # Update the current position (assumed to be provided by filtering/localization in the future)
-                current_x, current_y = goal_x, goal_y  # Update based on the filter (e.g., localization)
-                current_theta += angle_error  # This would also be updated by the filter
-
-                # Normalize current_theta to stay within the range [-pi, pi]
-                current_theta = self.wrap_angle(current_theta)
-
-                # If we're close enough to the goal, break out of the loop
-                if abs(angle_error) < 0.1 and self.distance(current_x, current_y, goal_x, goal_y) < 50:
-                    print(f"Reached goal: ({goal_x}, {goal_y})")
-                    break
-
-    def distance(self, x1, y1, x2, y2):
-        """
-        Calculate Euclidean distance between two points.
-        """
-        return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        while self.current_target_index < len(self.path):
+            self.move_to_next_target()
+            self.live_dynamic_local_adjustments()  # Integrate dynamic adjustments
+            time.sleep(0.1)  # Loop delay for smoother control
 
 
 
@@ -100,13 +131,14 @@ class MotionControl:
 
 if __name__ == "__main__":
     thymio = ThymioController()
-    motion_control = MotionControl(thymio)
-    path = [(23, 1), (22, 1), (21, 1), (20, 1), (19, 1), (19, 2), (19, 3), (19, 4), (19, 5), (19, 6), (19, 7), (19, 8), (19, 9), (19, 10), (19, 11), (19, 12), (19, 13), (19, 14), (19, 15), (19, 16), (19, 17), (19, 18), (19, 19), (20, 19), (21, 19), (22, 19), (23, 19), (24, 19), (25, 19), (25, 20), (25, 21), (25, 22), (25, 23), (25, 24), (25, 25), (25, 26), (24, 26), (23, 26), (22, 26), (21, 26), (20, 26), (19, 26), (18, 26), (17, 26), (16, 26), (16, 27), (16, 28), (16, 29), (16, 30), (16, 31), (16, 32), (16, 33), (16, 34), (16, 35), (16, 36), (16, 37), (16, 38), (16, 39), (16, 40), (15, 40), (14, 40), (13, 40), (12, 40), (11, 40), (10, 40), (9, 40), (8, 40), (7, 40), (6, 40), (5, 40), (4, 40), (3, 40), (2, 40), (1, 40), (1, 41), (1, 42), (1, 43), (1, 44), (1, 45), (1, 46), (1, 47), (1, 48), (1, 49), (1, 50), (1, 51), (1, 52), (1, 53), (1, 54), (1, 55), (1, 56), (1, 57)]
+    #path = [(23, 1), (22, 1), (21, 1), (20, 1), (19, 1), (19, 2), (19, 3), (19, 4), (19, 5), (19, 6), (19, 7), (19, 8), (19, 9), (19, 10), (19, 11), (19, 12), (19, 13), (19, 14), (19, 15), (19, 16), (19, 17), (19, 18), (19, 19), (20, 19), (21, 19), (22, 19), (23, 19), (24, 19), (25, 19), (25, 20), (25, 21), (25, 22), (25, 23), (25, 24), (25, 25), (25, 26), (24, 26), (23, 26), (22, 26), (21, 26), (20, 26), (19, 26), (18, 26), (17, 26), (16, 26), (16, 27), (16, 28), (16, 29), (16, 30), (16, 31), (16, 32), (16, 33), (16, 34), (16, 35), (16, 36), (16, 37), (16, 38), (16, 39), (16, 40), (15, 40), (14, 40), (13, 40), (12, 40), (11, 40), (10, 40), (9, 40), (8, 40), (7, 40), (6, 40), (5, 40), (4, 40), (3, 40), (2, 40), (1, 40), (1, 41), (1, 42), (1, 43), (1, 44), (1, 45), (1, 46), (1, 47), (1, 48), (1, 49), (1, 50), (1, 51), (1, 52), (1, 53), (1, 54), (1, 55), (1, 56), (1, 57)]
+    path = [(26, 1), (25, 1), (24, 1), (23, 1), (22, 1), (21, 1), (20, 1), (19, 1), (19, 2), (19, 3), (19, 4), (19, 5), (19, 6), (19, 7), (19, 8), (19, 9), (19, 10), (19, 11), (19, 12), (19, 13), (19, 14), (19, 15), (19, 16), (19, 17), (19, 18), (19, 19), (20, 19), (21, 19), (22, 19), (23, 19), (24, 19), (25, 19), (25, 20), (25, 21), (25, 22), (25, 23), (25, 24), (25, 25), (25, 26), (24, 26), (23, 26), (22, 26), (21, 26), (20, 26), (19, 26), (18, 26), (17, 26), (16, 26), (16, 27), (16, 28), (16, 29), (16, 30), (16, 31), (16, 32), (16, 33), (16, 34), (16, 35), (16, 36), (16, 37), (16, 38), (16, 39), (16, 40), (15, 40), (14, 40), (13, 40), (12, 40), (11, 40), (10, 40), (9, 40), (8, 40), (7, 40), (6, 40), (5, 40), (4, 40), (3, 40), (2, 40), (1, 40), (1, 41), (1, 42), (1, 43), (1, 44), (1, 45), (1, 46), (1, 47), (1, 48), (1, 49), (1, 50), (1, 51), (1, 52), (1, 53), (1, 54), (1, 55), (1, 56), (1, 57)]
+
 
     try:
         thymio.connect(timeout=5)
-        #path = [(40, 1), (39, 1), (38, 1), (37, 1), (36, 1), (35, 1), (34, 1), (33, 1), (32, 1), (31, 1), (30, 1), (29, 1), (28, 1)]
-        motion_control.follow_path(path, (23, 1, 0.2))
+        motion_control = MotionControl(thymio, path)
+        motion_control.run()
     finally:
         thymio.disconnect()
 
