@@ -1,7 +1,6 @@
 from tdmclient import ClientAsync, aw
 import time
 import math
-from src.utils.math_utils import normalize_angle
 
 class ThymioController:
     def __init__(self):
@@ -10,12 +9,6 @@ class ThymioController:
         """
         self.client = ClientAsync()
         self.node = None
-        self.current_position = (41, 1)  # Initial position (x, y)
-        self.orientation = 0  # Orientation in radians (0 radians = facing the "positive x-axis")
-
-        self.wheel_radius = 2.2  # cm
-        self.wheel_circumference = 2 * math.pi * self.wheel_radius
-
     def connect(self, timeout=5):
         """
         Connect to the Thymio robot by checking for available nodes, with a timeout.
