@@ -1,7 +1,7 @@
 import time
 
 from ThymioController import ThymioController
-
+from LocalNavigator import LocalNavigator
 
 class MotionControl:
     def __init__(self, thymio_controller, global_path):
@@ -14,20 +14,30 @@ class MotionControl:
         """
         self.thymio = thymio_controller
         self.path = global_path
-        self.current_index = 0
         self.current_position = global_path[0]
-        self.current_orientation = 0  # Start facing +X (0 degrees)
+        self.setup_orientation()  # Start facing +X (0 degrees)
+        self.local_navigator = LocalNavigator(thymio_controller)
         self.duration = 0.5
+        self.speed = 150
 
+    def setup_orientation(self):
+        if len(self.path) > 1:  # Ensure there are at least two waypoints
+            x1, y1 = self.path[0]
+            x2, y2 = self.path[1]
+
+            if x2 > x1:
+                self.current_orientation = 0  # Facing +X
+            elif x2 < x1:
+                self.current_orientation = 180  # Facing -X
+            elif y2 > y1:
+                self.current_orientation = 90  # Facing +Y
+            elif y2 < y1:
+                self.current_orientation = 270  # Facing -Y
+        else:
+            self.current_orientation = 0
     def calculate_target_orientation(self, target_position):
         """
         Calculate the target orientation based on the next waypoint.
-
-        Args:
-            target_position (tuple): The (x, y) coordinates of the target waypoint.
-
-        Returns:
-            int: Target orientation in degrees (0, 90, 180, 270).
         """
         x1, y1 = self.current_position
         x2, y2 = target_position
@@ -44,44 +54,42 @@ class MotionControl:
     def align_to_target_orientation(self, target_orientation):
         """
         Align the robot's orientation to the target orientation using 90-degree turns.
-
-        Args:
-            target_orientation (int): The target orientation in degrees (0, 90, 180, 270).
         """
-    # Calculate angular difference
         angle_difference = (target_orientation - self.current_orientation) % 360
 
         if angle_difference == 90:  # Turn right
             self.thymio.turn_right()
             self.current_orientation = (self.current_orientation + 90) % 360
-        elif angle_difference == 270:  # Turn left (shortest way to rotate counterclockwise)
+        elif angle_difference == 270:  # Turn left
             self.thymio.turn_left()
             self.current_orientation = (self.current_orientation - 90) % 360
         elif angle_difference == 180:
-            # This shouldn't happen in normal use with 90-degree increments
-            print(f"Unexpected 180-degree rotation required. Manual intervention needed.")
+            print(f"Unexpected 180-degree rotation required.")
         else:
-            # Already aligned
             print("Already facing the correct direction.")
-
 
     def move_to_target(self, target_position):
         """
-        Move the robot to the target position.
+        Move the robot to the target position, avoiding obstacles if necessary.
 
         Args:
             target_position (tuple): The target (x, y) position.
         """
         print(f"Moving to target: {target_position}")
         end_time = time.time() + self.duration
-        self.thymio.set_speed(200, 200)
         while time.time() < end_time:
-            # self.thymio.set_speed(200, 200)
-            time.sleep(0.05)
+            # Check for obstacles
+            if self.local_navigator.obstacle_detected():
+                self.thymio.stop()
+                self.local_navigator.handle_obstacle()
+            else:
+                # No obstacle, move forward
+                self.thymio.set_speed(self.speed, self.speed)
 
+            time.sleep(0.1)  # Sampling delay
 
-        # Update current position (simulated)
-        self.current_position = target_position
+        # self.thymio.stop()
+        self.current_position = target_position  # Update position (simulated)
 
     def execute_path(self):
         """
@@ -110,7 +118,7 @@ class MotionControl:
 
 if __name__ == "__main__":
     thymio = ThymioController()
-    path = [(22, 1), (21, 1), (20, 1), (19, 1), (19, 2), (19, 3), (19, 4), (19, 5), (19, 6), (19, 7), (19, 8), (19, 9), (19, 10), (19, 11), (19, 12), (19, 13), (19, 14), (19, 15), (19, 16), (19, 17), (19, 18), (19, 19), (20, 19), (21, 19), (22, 19), (23, 19), (24, 19), (25, 19), (25, 20), (25, 21), (25, 22), (25, 23), (25, 24), (25, 25), (25, 26), (24, 26), (23, 26), (22, 26), (21, 26), (20, 26), (19, 26), (18, 26), (17, 26), (16, 26), (16, 27), (16, 28), (16, 29), (16, 30), (16, 31), (16, 32), (16, 33), (16, 34), (16, 35), (16, 36), (16, 37), (16, 38), (16, 39), (16, 40), (15, 40), (14, 40), (13, 40), (12, 40), (11, 40), (10, 40), (9, 40), (8, 40), (7, 40), (6, 40), (5, 40), (4, 40), (3, 40), (2, 40), (1, 40), (1, 41), (1, 42), (1, 43), (1, 44), (1, 45), (1, 46), (1, 47), (1, 48), (1, 49), (1, 50), (1, 51), (1, 52), (1, 53), (1, 54), (1, 55), (1, 56), (1, 57)]
+    path = [(29, 16), (29, 17), (29, 18), (29, 19), (29, 20), (29, 21), (29, 22), (29, 23), (30, 23), (31, 23), (32, 23), (33, 23), (34, 23), (35, 23), (36, 23), (36, 24), (37, 24), (38, 24), (38, 25), (39, 25), (39, 26), (39, 27), (40, 27), (40, 28), (40, 29), (40, 30), (40, 31), (40, 32), (40, 33), (40, 34), (40, 35), (40, 36), (41, 36), (42, 36), (43, 36), (44, 36), (45, 36), (46, 36), (47, 36), (48, 36), (49, 36), (50, 36), (51, 36), (52, 36), (53, 36), (54, 36), (55, 36), (56, 36), (57, 36), (58, 36), (59, 36), (60, 36), (61, 36), (62, 36), (63, 36), (64, 36), (65, 36), (66, 36), (67, 36), (68, 36), (69, 36)]
     try:
         # Define path (list of waypoints)
         #path = [(19, 1), (20, 1), (21, 1), (21, 2), (21, 3), (21, 4)]
