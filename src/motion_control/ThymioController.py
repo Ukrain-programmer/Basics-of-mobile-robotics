@@ -1,6 +1,7 @@
 from tdmclient import ClientAsync, aw
 import time
 import math
+import asyncio
 
 class ThymioController:
     def __init__(self):
@@ -77,6 +78,7 @@ class ThymioController:
             print("Disconnected from Thymio.")
 
 
+
     def turn_right(self, speed = 200):
         self.set_speed(speed, -speed)
         time.sleep(1.1)
@@ -87,18 +89,43 @@ class ThymioController:
         time.sleep(1.1)
         self.stop()
 
+    def get_proximity(self):
+        """
+        Retrieve the current proximity sensor values as an array.
+
+        Returns:
+            list: An array of proximity sensor values [front_left, front_left_center, front_center, front_right_center, front_right],
+                  or None if the Thymio is not connected.
+        """
+        global leds_top, leds_bottom_left
+        if self.node:
+            self.client.process_waiting_messages()
+            aw(self.node.wait_for_variables({"prox.horizontal"}))
+            prox_horizontal = list(self.node["prox.horizontal"])
+
+            return [
+                prox_horizontal[0],
+                prox_horizontal[1],
+                prox_horizontal[2],
+                prox_horizontal[3],
+                prox_horizontal[4],
+            ]
+        else:
+            print("Thymio not connected. Please connect first.")
+            return None
 
 
 
 
 
 
-# if __name__ == "__main__":
-#     try:
-#         thymio = ThymioController()
-#         thymio.connect(timeout=5)
-#
-#         thymio.turn_right(200)
-#
-#     finally:
-#         thymio.disconnect()
+if __name__ == "__main__":
+    try:
+        thymio = ThymioController()
+        thymio.connect(timeout=5)
+
+        v = thymio.get_proximity()
+        thymio.turn_right(200)
+
+    finally:
+        thymio.disconnect()

@@ -17,7 +17,7 @@ class MotionControl:
         self.current_position = global_path[0]
         self.setup_orientation()  # Start facing +X (0 degrees)
         self.local_navigator = LocalNavigator(thymio_controller)
-        self.duration = 0.5
+        self.duration = 1
         self.speed = 150
 
     def setup_orientation(self):
@@ -42,9 +42,9 @@ class MotionControl:
         x1, y1 = self.current_position
         x2, y2 = target_position
 
-        if x2 > x1:  # Moving right (+X)
+        if x2 < x1:  # Moving right (+X)
             return 0
-        elif x2 < x1:  # Moving left (-X)
+        elif x2 > x1:  # Moving left (-X)
             return 180
         elif y2 > y1:  # Moving up (+Y)
             return 90
