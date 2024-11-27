@@ -78,3 +78,31 @@ class KalmanFilter:
 
         # Return results
         return next_t, X_updated, P_updated, X_predicted
+
+
+
+kf = KalmanFilter(robot_length=robot_length, speed_variance=speed_variance)
+
+# Initial state x, control input u, measurement z, and covariance matrix P
+x = np.array([0, 0, 0], dtype=float)  # Initial state [x, y, theta]
+u = np.array([2, -2], dtype=float)  # Control input [left speed, right speed]
+P = np.eye(3)  # Initial covariance matrix (identity matrix)
+z = np.array([0, 0, 0], dtype=float)  # Initial measurement
+
+# Start testing loop with 10 iterations
+next_time = 0  # Initial time step
+for i in range(10):
+    # Update measurement z for each iteration
+    z = np.array([2*i, i, i/10], dtype=float)  # Example measurement [x, y, theta]
+    
+    # Call the kalman_filter method
+    next_time, x_updated, P_updated, x_predicted = kf.kalman_filter(False, u, z)
+    
+    # Sleep for a second to simulate real-time processing
+    time.sleep(1)
+    
+    # Print the current iteration, updated state and predicted state
+    print(f"Iteration {i}:")
+    print("Updated state:", np.round(x_updated, 2))
+    print("Predicted state:", np.round(x_predicted, 2))
+    print("-" * 30)
