@@ -10,6 +10,7 @@ class ThymioController:
         """
         self.client = ClientAsync()
         self.node = None
+        self.wheel_speed = [0, 0] #current wheel speed (left, right)
     def connect(self, timeout=5):
         """
         Connect to the Thymio robot by checking for available nodes, with a timeout.
@@ -51,6 +52,8 @@ class ThymioController:
                 "motor.right.target": [right_speed],
             }
             aw(self.node.set_variables(v))
+            self.wheel_speed[0] = left_speed
+            self.wheel_speed[1] = right_speed
             # print(f"Set motor speeds: left={left_speed}, right={right_speed}")
         else:
             print("Thymio not connected. Please connect first.")
