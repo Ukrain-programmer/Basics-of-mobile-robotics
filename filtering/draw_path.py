@@ -10,9 +10,14 @@ mtx = np.array(calibration_data['camera_matrix'])
 dist = np.array(calibration_data['dist_coeff'])
 print(mtx)
 
-# Load the ArUco dictionary
+# Load the ArUco dictionary and board
 aruco_dict = aruco.getPredefinedDictionary(aruco.DICT_6X6_1000)
 arucoParams = aruco.DetectorParameters_create()
+
+# Set up the GridBoard parameters
+markerLength = 3.75  # cm
+markerSeparation = 0.5  # cm
+board = aruco.GridBoard_create(4, 5, markerLength, markerSeparation, aruco_dict)
 
 # Initialize camera
 camera = cv2.VideoCapture(0)
@@ -29,8 +34,8 @@ if not ret:
 h, w = img.shape[:2]
 newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
-# Store the positions of the circles to create a path effect
-circle_positions = []
+# Initialize a list to track the centers of the markers
+marker_centers = {}
 
 # Processing loop
 print("Press 'q' to exit.")
@@ -50,37 +55,60 @@ while True:
     corners, ids, rejectedImgPoints = aruco.detectMarkers(dst, aruco_dict, parameters=arucoParams)
     
     if ids is not None:  # Markers detected
-        # Draw detected markers
-        img_aruco = aruco.drawDetectedMarkers(img, corners, ids, (0, 255, 0))
+        # Estimate pose of the board
+        rvec = np.zeros((1, 3), dtype=np.float32)
+        tvec = np.zeros((1, 3), dtype=np.float32)
+        ret = aruco.estimatePoseBoard(corners, ids, board, newcameramtx, dist, rvec, tvec)
         
-        # Estimate pose for each marker
-        rvecs, tvecs, _ = aruco.estimatePoseSingleMarkers(corners, 3.75, newcameramtx, dist)
-        
-        # Process each detected marker
-        for i in range(len(ids)):
-            # Draw axis for each marker
-            img_aruco = cv2.drawFrameAxes(img_aruco, newcameramtx, dist, rvecs[i], tvecs[i], 20)
-            
-            # Get the corner coordinates of the current marker
-            marker_corners = corners[i][0]
-            
-            # Compute the center of the marker (average of the 4 corners)
-            center_x = int(np.mean(marker_corners[:, 0]))
-            center_y = int(np.mean(marker_corners[:, 1]))
-            
-            # Draw a circle at the center of the marker
-            radius = 10  # radius of the circle in pixels
-            cv2.circle(img_aruco, (center_x, center_y), radius, (0, 0, 255), -1)  # Red circle
-            
-            # Store the center for path drawing
-            circle_positions.append((center_x, center_y))
-        
-        # Draw the path (previous circles) by connecting the circle centers
-        for i in range(1, len(circle_positions)):
-            cv2.line(img_aruco, circle_positions[i - 1], circle_positions[i], (255, 0, 0), 2)  # Blue path
+        if ret:
+            # Draw markers and axis
+            img_aruco = aruco.drawDetectedMarkers(img, corners, ids, (0, 255, 0))
+            img_aruco = cv2.drawFrameAxes(img_aruco, newcameramtx, dist, rvec, tvec, 20)
 
-        # Display the output
-        cv2.imshow("World Coordinate Frame Axes with Path", img_aruco)
+            # Get the 3D positions of the marker corners in the world frame
+            marker_corners_3d = np.array([
+                [-markerLength / 2, -markerLength / 2, 0],
+                [markerLength / 2, -markerLength / 2, 0],
+                [markerLength / 2, markerLength / 2, 0],
+                [-markerLength / 2, markerLength / 2, 0]
+            ], dtype=np.float32)
+
+            # Solve PnP for each marker
+            for i in range(len(ids)):
+                # Get the corresponding 2D points for this marker
+                marker_2d = corners[i][0]
+                
+                # Solve PnP to find rotation and translation vectors for each marker
+                _, rvec_marker, tvec_marker = cv2.solvePnP(marker_corners_3d, marker_2d, newcameramtx, dist)
+                
+                # Project the 3D points of the marker to 2D image coordinates
+                projected_points, _ = cv2.projectPoints(marker_corners_3d, rvec_marker, tvec_marker, newcameramtx, dist)
+                
+                # Convert to integer coordinates
+                projected_points = projected_points.reshape(-1, 2).astype(int)
+                
+                # Calculate the center of the marker
+                center = np.mean(projected_points, axis=0).astype(int)
+
+                # Store the center for later use
+                marker_id = ids[i][0]
+                if marker_id not in marker_centers:
+                    marker_centers[marker_id] = []
+
+                marker_centers[marker_id].append(center)
+
+                # Draw circles on the marker center
+                cv2.circle(img_aruco, tuple(center), 5, (0, 0, 255), -1)
+
+                # Optionally, draw lines between the centers to show the movement path
+                if len(marker_centers[marker_id]) > 1:
+                    for j in range(1, len(marker_centers[marker_id])):
+                        cv2.line(img_aruco, tuple(marker_centers[marker_id][j-1]), tuple(marker_centers[marker_id][j]), (255, 0, 0), 2)
+
+            # Display the output
+            cv2.imshow("World Coordinate Frame Axes", img_aruco)
+        else:
+            print("Pose estimation failed.")
     else:
         print("No markers detected.")
 
@@ -91,4 +119,3 @@ while True:
 # Release resources
 camera.release()
 cv2.destroyAllWindows()
-
