@@ -1,6 +1,7 @@
 from tdmclient import ClientAsync, aw
 import time
 import math
+import asyncio
 
 class ThymioController:
     def __init__(self):
@@ -9,6 +10,7 @@ class ThymioController:
         """
         self.client = ClientAsync()
         self.node = None
+        self.wheel_speed = [0, 0] #current wheel speed (left, right)
     def connect(self, timeout=5):
         """
         Connect to the Thymio robot by checking for available nodes, with a timeout.
@@ -50,6 +52,8 @@ class ThymioController:
                 "motor.right.target": [right_speed],
             }
             aw(self.node.set_variables(v))
+            self.wheel_speed[0] = left_speed
+            self.wheel_speed[1] = right_speed
             # print(f"Set motor speeds: left={left_speed}, right={right_speed}")
         else:
             print("Thymio not connected. Please connect first.")
@@ -77,6 +81,7 @@ class ThymioController:
             print("Disconnected from Thymio.")
 
 
+
     def turn_right(self, speed = 200):
         self.set_speed(speed, -speed)
         time.sleep(1.1)
@@ -87,18 +92,43 @@ class ThymioController:
         time.sleep(1.1)
         self.stop()
 
+    def get_proximity(self):
+        """
+        Retrieve the current proximity sensor values as an array.
+
+        Returns:
+            list: An array of proximity sensor values [front_left, front_left_center, front_center, front_right_center, front_right],
+                  or None if the Thymio is not connected.
+        """
+        global leds_top, leds_bottom_left
+        if self.node:
+            self.client.process_waiting_messages()
+            aw(self.node.wait_for_variables({"prox.horizontal"}))
+            prox_horizontal = list(self.node["prox.horizontal"])
+
+            return [
+                prox_horizontal[0],
+                prox_horizontal[1],
+                prox_horizontal[2],
+                prox_horizontal[3],
+                prox_horizontal[4],
+            ]
+        else:
+            print("Thymio not connected. Please connect first.")
+            return None
 
 
 
 
 
 
-# if __name__ == "__main__":
-#     try:
-#         thymio = ThymioController()
-#         thymio.connect(timeout=5)
-#
-#         thymio.turn_right(200)
-#
-#     finally:
-#         thymio.disconnect()
+if __name__ == "__main__":
+    try:
+        thymio = ThymioController()
+        thymio.connect(timeout=5)
+
+        v = thymio.get_proximity()
+        thymio.turn_right(200)
+
+    finally:
+        thymio.disconnect()
