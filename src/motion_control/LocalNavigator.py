@@ -15,14 +15,20 @@ class LocalNavigator:
         self.obst_thr_low = 1500  # Proximity threshold to return to goal tracking
         self.obst_speed_gain = 0.07  # Gain for obstacle avoidance
 
-    def obstacle_detected(self):
+        self.ground_thrust_limit = 0
+
+
+    def kidnapping_detect(self):
+        prox = self.thymio.get_front_proximity()
+        return any(sensor <= self.ground_thrust_limit for sensor in prox)
+    def obstacle_detect(self):
         """
         Check if an obstacle is detected using all proximity sensors.
 
         Returns:
             bool: True if an obstacle is detected, False otherwise.
         """
-        prox = self.thymio.get_proximity()
+        prox = self.thymio.get_front_proximity()
         return any(sensor > self.obst_thr_high for sensor in prox[:5])  # Consider front and side sensors
 
     def handle_obstacle(self):
@@ -31,7 +37,7 @@ class LocalNavigator:
         """
         print("Obstacle detected! Avoiding...")
         while True:
-            prox = self.thymio.get_proximity()
+            prox = self.thymio.get_front_proximity()
 
             # Extract proximity readings
             front_left = prox[2]

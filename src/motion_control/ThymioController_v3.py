@@ -89,7 +89,7 @@ class MotionControl:
         print("Obstacle detected! Initiating avoidance maneuver.")
         while True:
             # Fetch proximity sensor values
-            proximity = self.thymio.get_proximity()
+            proximity = self.thymio.get_front_proximity()
             left, front_left, front_center, front_right, right = proximity
 
             if front_center > 2000 or front_left > 2000 or front_right > 2000:  # Obstacle ahead
@@ -135,7 +135,7 @@ class MotionControl:
 
             while True:
                 # Fetch proximity sensor values
-                proximity = self.thymio.get_proximity()
+                proximity = self.thymio.get_front_proximity()
                 if any(sensor > 2000 for sensor in proximity):  # Obstacle detected
                     self.avoid_obstacle()
 

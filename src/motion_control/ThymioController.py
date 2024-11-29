@@ -92,7 +92,7 @@ class ThymioController:
         time.sleep(1.1)
         self.stop()
 
-    def get_proximity(self):
+    def get_front_proximity(self):
         """
         Retrieve the current proximity sensor values as an array.
 
@@ -118,6 +118,29 @@ class ThymioController:
             return None
 
 
+    def get_ground_proximity(self):
+        """
+        Retrieve the current ground sensor values as an array.
+
+        Returns:
+            list: An array of ground sensor values [left_ground, right_ground],
+                  or None if the Thymio is not connected.
+        """
+        if self.node:
+            self.client.process_waiting_messages()
+            aw(self.node.wait_for_variables({"prox.ground.ambiant"}))
+            ground_reflected = list(self.node["prox.ground.ambiant"])
+
+            return [
+                ground_reflected[0],  # Left ground sensor
+                ground_reflected[1],  # Right ground sensor
+            ]
+        else:
+            print("Thymio not connected. Please connect first.")
+            return None
+
+
+
 
 
 
@@ -127,7 +150,7 @@ if __name__ == "__main__":
         thymio = ThymioController()
         thymio.connect(timeout=5)
 
-        v = thymio.get_proximity()
+        v = thymio.get_ground()
         thymio.turn_right(200)
 
     finally:

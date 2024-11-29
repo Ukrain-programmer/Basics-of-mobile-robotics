@@ -79,7 +79,7 @@ class MotionControl:
         end_time = time.time() + self.duration
         while time.time() < end_time:
             # Check for obstacles
-            if self.local_navigator.obstacle_detected():
+            if self.local_navigator.obstacle_detect():
                 self.thymio.stop()
                 self.local_navigator.handle_obstacle()
             else:
