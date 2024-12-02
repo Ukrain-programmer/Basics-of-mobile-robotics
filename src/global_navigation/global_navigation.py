@@ -28,6 +28,41 @@ class AStarNavigation:
         self.path = None
         self.ratio = None
 
+
+    def visualization_map_with_var(self, image_var):
+        """
+        Reads the environment map from the file, identifies start and goal,
+        visualizes the map, and prepares it for pathfinding.
+        """
+        # Load the text file and convert it to a image
+        self.image = image_var
+
+        # Find the coordinates of the first occurrence of the digit 2, 3
+        self.start = tuple(np.argwhere(self.image == 2)[0])
+        self.goal = tuple(np.argwhere(self.image == 3)[0])
+
+        # Replace all occurrences of the digit 2 and 3 with 0 for the map
+        self.image[self.start] = 0
+        self.image[self.goal] = 0
+
+        # conversion for display
+        self.image = np.where(self.image == 0, 255, self.image)
+        self.image = np.where(self.image == 1, 0, self.image)
+
+        # Resize the map while maintaining the aspect ratio
+        height, width = self.image.shape
+        self.ratio = NEW_WIDTH / width
+        new_height =  int(self.ratio * height)
+        self.image = cv2.resize(self.image, (NEW_WIDTH, new_height), interpolation=cv2.INTER_NEAREST)
+
+        # Update the start and goal positions after resizing
+        start_y, start_x = self.start
+        goal_y, goal_x = self.goal
+        self.new_start = (int(start_y * self.ratio), int(start_x * self.ratio))
+        self.new_goal = (int(goal_y * self.ratio), int(goal_x * self.ratio))
+
+        self.image = np.where(self.image == 0, -1., self.image)
+        self.image = np.where(self.image == 255, 0., self.image)
     def visualization_map(self):
         """
         Reads the environment map from the file, identifies start and goal,
@@ -251,6 +286,14 @@ class AStarNavigation:
         path, explored, operation_count = self.algo()
         return self.solution(path, explored, operation_count)
 
+    def new_path_with_var(self, image_var):
+        """
+        Executes the full path-finding pipeline
+        """
+        self.visualization_map_with_var(image_var)
+        self.map_grid = self.safety_distance()
+        path, explored, operation_count = self.algo()
+        return self.solution(path, explored, operation_count)
     def new_path(self, new_y, new_x):
         """
         Computes a new path from a given starting point
