@@ -1,5 +1,7 @@
 import time
 from ThymioController import ThymioController
+from src.Constatnts import BASE_LOOP_DELAY, PUT_BACK_DELAY
+
 
 class LocalNavigator:
     def __init__(self, thymio):
@@ -15,12 +17,20 @@ class LocalNavigator:
         self.obst_thr_low = 1500  # Proximity threshold to return to goal tracking
         self.obst_speed_gain = 0.07  # Gain for obstacle avoidance
 
-        self.ground_thrust_limit = 0
-
+        self.ground_thr_limit = 0
 
     def kidnapping_detect(self):
         prox = self.thymio.get_front_proximity()
-        return any(sensor <= self.ground_thrust_limit for sensor in prox)
+        return any(sensor <= self.ground_thr_limit for sensor in prox)
+
+    def put_back_detecting(self):
+        while True:
+            prox = self.thymio.get_front_proximity()
+            if any(sensor > self.ground_thr_limit for sensor in prox):
+                time.sleep(PUT_BACK_DELAY)
+                return
+            time.sleep(BASE_LOOP_DELAY)
+
     def obstacle_detect(self):
         """
         Check if an obstacle is detected using all proximity sensors.
