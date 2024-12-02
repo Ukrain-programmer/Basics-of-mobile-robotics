@@ -4,6 +4,9 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 from heapq import heappush, heappop # For priority queue operations in A* algorithm
 import cv2 # For image processing tasks
+NEW_WIDTH = 60 # grid width todo
+SAFETY = 5 # minimum distance from obstacles
+
 
 # Handles the global navigation tasks for the robot, including pathfinding and
 # avoiding static obstacles using A* algorithm for graph search 
@@ -52,10 +55,9 @@ class AStarNavigation:
         
         # Resize the map while maintaining the aspect ratio
         height, width = self.image.shape
-        new_width = 60 #todo choose
-        self.ratio = new_width / width
+        self.ratio = NEW_WIDTH / width
         new_height =  int(self.ratio * height)
-        self.image = cv2.resize(self.image, (new_width, new_height), interpolation=cv2.INTER_NEAREST)
+        self.image = cv2.resize(self.image, (NEW_WIDTH, new_height), interpolation=cv2.INTER_NEAREST)
         
         # Update the start and goal positions after resizing
         start_y, start_x = self.start
@@ -232,7 +234,7 @@ class AStarNavigation:
         """
         # Display the result
         if path:
-            swapped_path = [(x, y) for y, x in self.path][::-1]
+            swapped_path = [(x, y) for y, x in self.path][::-1] # uniformize coordonate system
             print(f"{operation_count} operations to find the optimal path")
             self.display_map(explored)
             return swapped_path 
@@ -260,8 +262,7 @@ class AStarNavigation:
         
 # calls
 file = "images/grid_map_6_8.txt"
-safety = 5
-navigator = AStarNavigation(file, safety)
+navigator = AStarNavigation(file, SAFETY)
 swapped_path = navigator.run()
 print(swapped_path)
 x, y = navigator.pixel_to_grid(200, 300)
