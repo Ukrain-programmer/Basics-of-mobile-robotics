@@ -1,7 +1,7 @@
 import math
 import time
 from ThymioController import ThymioController
-from  src.kalman_filter import KalmanFilter
+from src.kalman_filter import KalmanFilter
 
 class MotionControl:
     def __init__(self, thymio_controller, global_path, kalman_filter):
@@ -15,6 +15,7 @@ class MotionControl:
         """
         self.thymio = thymio_controller
         self.path = global_path
+        self.path_iterator = 0
         self.current_position = global_path[0]  # Start at the first waypoint
         self.current_orientation = 0  # Initial orientation (facing +X)
         # self.local_navigator = LocalNavigator(thymio_controller)
@@ -35,20 +36,16 @@ class MotionControl:
 
         while True:
             # Get velocities
-            # left_speed, right_speed = self.thymio.get_wheel_speeds()
+            left_speed, right_speed = self.thymio.get_speed()
 
-            _, x, _, _ = self.kalman_filter.kalman_filter(False, self.thymio.wheel_speed, 0)
+            _, x, _, _ = self.kalman_filter.kalman_filter(False,[left_speed, right_speed], 0)
             self.x = x[0]
             self.y = x[1]
             self.theta = x[2]
             print(f"x: {self.x}, y: {self.y}, theta: {self.theta}")
-            # Update position using the Kalman filter
-            #  = self.kalman_filter(left_speed, right_speed)
 
-            # Calculate distance to the target
             distance_to_target = ((self.x - target_x) ** 2 + (self.y - target_y) ** 2) ** 0.5
 
-            # Check if the robot has reached the target
             print("distance_to_target: ", distance_to_target)
             if distance_to_target < 0.5:  # Threshold for reaching the waypoint
                 print(f"Reached target: {target_position}")
@@ -56,15 +53,6 @@ class MotionControl:
                 self.thymio.stop()
                 break
 
-            # # Check for obstacles
-            # if self.local_navigator.obstacle_detected():
-            #     print("Obstacle detected! Activating avoidance mode.")
-            #     self.thymio.stop()
-            #     self.local_navigator.handle_obstacle()
-            #
-            # else:
-            #     # Move forward
-            #     self.thymio.set_speed(self.speed, self.speed)
             self.thymio.set_speed(self.speed, self.speed)
             time.sleep(0.1)  # Sampling delay
 

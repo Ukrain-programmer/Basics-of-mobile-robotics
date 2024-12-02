@@ -1,7 +1,6 @@
-from tdmclient import ClientAsync, aw
 import time
-import math
-import asyncio
+from tdmclient import ClientAsync, aw
+
 
 class ThymioController:
     def __init__(self):
@@ -10,7 +9,7 @@ class ThymioController:
         """
         self.client = ClientAsync()
         self.node = None
-        self.wheel_speed = [0, 0] #current wheel speed (left, right)
+        # self.wheel_speed = [0, 0] #current wheel speed (left, right)
     def connect(self, timeout=5):
         """
         Connect to the Thymio robot by checking for available nodes, with a timeout.
@@ -52,9 +51,6 @@ class ThymioController:
                 "motor.right.target": [right_speed],
             }
             aw(self.node.set_variables(v))
-            self.wheel_speed[0] = left_speed
-            self.wheel_speed[1] = right_speed
-            # print(f"Set motor speeds: left={left_speed}, right={right_speed}")
         else:
             print("Thymio not connected. Please connect first.")
 
@@ -138,6 +134,28 @@ class ThymioController:
         else:
             print("Thymio not connected. Please connect first.")
             return None
+
+
+    def get_speed(self):
+        """
+        Retrieve the current motor speeds as an array.
+
+        Returns:
+            list: An array of motor speeds [left_speed, right_speed],
+                  or None if the Thymio is not connected.
+        """
+        if self.node:
+            self.client.process_waiting_messages()
+            aw(self.node.wait_for_variables({"motor.left.speed", "motor.right.speed"}))
+
+            left_speed = self.node["motor.left.speed"]
+            right_speed = self.node["motor.right.speed"]
+
+            return left_speed, right_speed
+        else:
+            print("Thymio not connected. Please connect first.")
+            return None
+
 
 
 

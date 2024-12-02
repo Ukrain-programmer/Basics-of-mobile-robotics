@@ -1,6 +1,6 @@
 import time
 from ThymioController import ThymioController
-from src.Constatnts import BASE_LOOP_DELAY, PUT_BACK_DELAY
+from src.Constants import BASE_LOOP_DELAY, PUT_BACK_DELAY
 
 
 class LocalNavigator:
