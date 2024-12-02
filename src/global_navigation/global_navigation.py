@@ -15,7 +15,7 @@ class AStarNavigation:
         self.path = None
 
 
-    def visualization_map(self, image_var):
+    def visualization_map_with_var(self, image_var):
         self.image = image_var
 
         # Find the coordinates of the first occurrence of the digit 2, 3
@@ -30,10 +30,6 @@ class AStarNavigation:
         self.image = np.where(self.image == 0, 255, self.image)
         self.image = np.where(self.image == 1, 0, self.image)
 
-        plt.imshow(self.image, cmap='gray')
-        plt.axis('off')
-        plt.show()
-
         # Resize the map to 100 pixels wide while maintaining the aspect ratio
         height, width = self.image.shape
         new_width = 60 #todo choose
@@ -45,12 +41,6 @@ class AStarNavigation:
         goal_y, goal_x = self.goal
         self.start = (int(start_y * new_height / height), int(start_x * new_width / width))
         self.goal = (int(goal_y * new_height / height), int(goal_x * new_width / width))
-
-
-        # Display the self.image
-        plt.imshow(self.image, cmap='gray')
-        plt.axis('off')
-        plt.show()
 
         # conversion for self.path planning
         self.image = np.where(self.image == 0, -1., self.image)
@@ -247,8 +237,8 @@ class AStarNavigation:
         path, explored, operation_count = self.algo()
         return self.solution(path, explored, operation_count)
 
-    def run(self, image_var):
-        self.visualization_map(image_var)
+    def run_with_var(self, image_var):
+        self.visualization_map_with_var(image_var)
         self.map_grid = self.safety_distance()
         path, explored, operation_count = self.algo()
         return self.solution(path, explored, operation_count)
