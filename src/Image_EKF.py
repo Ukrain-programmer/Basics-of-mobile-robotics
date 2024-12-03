@@ -95,3 +95,33 @@ class Image_EKF:
         resized_image = cv2.resize(image, (new_width, new_height), interpolation=cv2.INTER_NEAREST)
 
         return resized_image
+        
+    @staticmethod
+    def warp_and_transform(frame, width=60, height=80,point=None):
+        rect_corners = np.array([[125, 123], [544, 128], [582,340], [89, 343]], dtype=np.float32)
+        # Define destination points for the flattened rectangle
+        dst_corners = np.array([
+            [0, 0],
+            [width - 1, 0],
+            [width - 1, height - 1],
+            [0, height - 1]
+        ], dtype=np.float32)
+    
+        # Compute the perspective transform matrix
+        matrix = cv2.getPerspectiveTransform(rect_corners, dst_corners)
+    
+        # Apply perspective warp to get the top-down view
+        warped_image = cv2.warpPerspective(frame, matrix, (width, height))
+        if point is not None:
+            # Ensure point is in homogeneous coordinates
+            point = np.array([point[0], point[1], 1], dtype=np.float32)  # Add z = 1 for homogeneity
+            point_warped = np.dot(matrix, point)
+            point_warped /= point_warped[2]  # Normalize to get 2D coordinates
+            # Draw the point on the warped image
+            point_warped = tuple(map(int, point_warped[:2])) 
+            #cv2.circle(warped_image, point_warped[:2], radius=3, color=(255, 0, 255), thickness=5)  # Red dot
+        
+            return warped_image, point_warped[:2]  # Return x, y as 2D
+        return warped_image 
+        
+        

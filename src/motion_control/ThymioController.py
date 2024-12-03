@@ -96,6 +96,7 @@ class ThymioController:
             list: An array of proximity sensor values [front_left, front_left_center, front_center, front_right_center, front_right],
                   or None if the Thymio is not connected.
         """
+        global leds_top, leds_bottom_left
         if self.node:
             self.client.process_waiting_messages()
             aw(self.node.wait_for_variables({"prox.horizontal"}))
@@ -161,7 +162,7 @@ class ThymioController:
 
 
 
-#
+
 if __name__ == "__main__":
     try:
         thymio = ThymioController()

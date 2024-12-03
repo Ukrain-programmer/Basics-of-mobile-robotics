@@ -89,6 +89,8 @@ class PositionUpdate:
             self.kf.Z[2] = np.radians(PositionUpdate.euler_from_rvec(rvec_marker)[2])
 
             if not self.initial or self.kidnapped:
+                self.odom_centers=[]
+                self.marker_centers=[]
                 self.odom_tvec = tvec_marker
                 self.odom_centers.append(center)
                 self.initial_tz = self.odom_tvec[2][0]
@@ -100,6 +102,7 @@ class PositionUpdate:
                     self.marker_corners_3d, newcameramtx, dist, self.period, self.odom_centers,
                     self.initial_tz, False, self.kf.U, self.kf.Z)
                 self.initial = True
+                self.kidnapped = False
                 self.kf.theta = 0
                 end_time = time.time()
                 self.period = end_time - self.current_time
