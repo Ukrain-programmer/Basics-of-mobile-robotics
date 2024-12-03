@@ -20,12 +20,12 @@ class LocalNavigator:
         self.ground_thr_limit = 0
 
     def kidnapping_detect(self):
-        prox = self.thymio.get_front_proximity()
+        prox = self.thymio.get_ground_proximity()
         return any(sensor <= self.ground_thr_limit for sensor in prox)
 
     def put_back_detecting(self):
         while True:
-            prox = self.thymio.get_front_proximity()
+            prox = self.thymio.get_ground_proximity()
             if any(sensor > self.ground_thr_limit for sensor in prox):
                 time.sleep(PUT_BACK_DELAY)
                 return

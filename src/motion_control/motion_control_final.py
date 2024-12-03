@@ -2,10 +2,10 @@ import math
 import time
 from src.motion_control.ThymioController import ThymioController
 from src.KalmanFilter import KalmanFilter
-
+from src.global_navigation.global_navigation import AStarNavigation
 
 class MotionControl:
-    def __init__(self, thymio_controller, global_path, kalman_filter: KalmanFilter):
+    def __init__(self, thymio_controller, global_path, kalman_filter: KalmanFilter, global_navigation : AStarNavigation):
         self.thymio = thymio_controller
         self.path = global_path
         self.path_iterator = 0
@@ -13,6 +13,7 @@ class MotionControl:
         self.current_orientation = 0  # Initial orientation (facing +X)
         self.speed = 50
         self.kalman_filter = KalmanFilter()
+        self.global_navigation = global_navigation
         self.current_x, self.current_y, self.current_theta = global_path[0][0], global_path[0][1], 0  # Initial state
 
     def setup_new_path(self, path, theta):
@@ -28,8 +29,7 @@ class MotionControl:
 
         _, x, _, _ = self.kalman_filter.kalman_filter(False, [left_speed, right_speed], 0)
 
-        self.current_x = x[0]
-        self.current_y = x[1]
+        self.current_x, self.current_y = self.global_navigation.pixel_to_grid(x[0], x[1])
         self.current_theta = x[2]
 
         if self.current_x == target_x and target_y == self.current_y:
