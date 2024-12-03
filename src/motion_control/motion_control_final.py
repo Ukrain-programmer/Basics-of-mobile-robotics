@@ -1,18 +1,17 @@
-import math
 import time
-from src.motion_control.ThymioController import ThymioController
-from src.KalmanFilter import KalmanFilter
+
 from src.global_navigation.global_navigation import AStarNavigation
+from src.motion_control.ThymioController import ThymioController
+
 
 class MotionControl:
-    def __init__(self, thymio_controller, global_path, kalman_filter: KalmanFilter, global_navigation : AStarNavigation):
+    def __init__(self, thymio_controller, global_path, global_navigation : AStarNavigation):
         self.thymio = thymio_controller
         self.path = global_path
         self.path_iterator = 0
         # self.current_position = global_path[0]  # Start at the first waypoint
         self.current_orientation = 0  # Initial orientation (facing +X)
         self.speed = 50
-        self.kalman_filter = KalmanFilter()
         self.global_navigation = global_navigation
         self.current_x, self.current_y, self.current_theta = global_path[0][0], global_path[0][1], 0  # Initial state
 
@@ -21,16 +20,16 @@ class MotionControl:
         self.path_iterator = 0
         self.current_x, self.current_y, self.current_theta = path[0][0], path[0][1], theta
 
-    def move_to_target(self, target_position):
+    def move_to_target(self, target_position, current_position : list):
         print(f"Moving to target: {target_position}")
         target_x, target_y = target_position
 
-        left_speed, right_speed = self.thymio.get_speed()
+        # left_speed, right_speed = self.thymio.get_speed()
 
-        _, x, _, _ = self.kalman_filter.kalman_filter(False, [left_speed, right_speed], 0)
+        # _, x, _, _ = self.kalman_filter.kalman_filter(False, [left_speed, right_speed], 0)
 
-        self.current_x, self.current_y = self.global_navigation.pixel_to_grid(x[0], x[1])
-        self.current_theta = x[2]
+        self.current_x, self.current_y = self.global_navigation.pixel_to_grid(current_position[0], current_position[1])
+        self.current_theta = current_position[2]
 
         if self.current_x == target_x and target_y == self.current_y:
             # self.current_position = (self.current_x, self.current_y)
