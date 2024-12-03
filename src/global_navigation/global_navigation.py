@@ -60,6 +60,10 @@ class AStarNavigation:
         self.new_start = (int(start_y * self.ratio), int(start_x * self.ratio))
         self.new_goal = (int(goal_y * self.ratio), int(goal_x * self.ratio))
 
+        # Display the self.image
+        plt.imshow(self.image, cmap='gray')
+        plt.axis('off')
+        plt.show()
 
         # conversion for path planning
         self.image = np.where(self.image == 0, -1., self.image)
