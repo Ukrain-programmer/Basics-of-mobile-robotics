@@ -1,5 +1,5 @@
 import time
-from ThymioController import ThymioController
+from src.motion_control.ThymioController import ThymioController
 from src.Constants import BASE_LOOP_DELAY, PUT_BACK_DELAY
 
 

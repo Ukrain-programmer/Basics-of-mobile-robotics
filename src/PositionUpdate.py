@@ -1,8 +1,8 @@
 import numpy as np
 import cv2
 import time
-from KalmanFilter import KalmanFilter
-from Image_EKF import Image_EKF
+from src.KalmanFilter import KalmanFilter
+from src.Image_EKF import Image_EKF
 
 
 class PositionUpdate:
@@ -36,8 +36,7 @@ class PositionUpdate:
             for j in range(1, len(marker_centers)):
                 cv2.line(image, tuple(marker_centers[j - 1]), tuple(marker_centers[j]), color, thickness)
 
-    def update_odom_position(self, marker_corners_3d, newcameramtx, dist, period, centers, initial,
-                             aruco_detected, U, Z):
+    def update_odom_position(self, marker_corners_3d, newcameramtx, dist, period, centers, initial,aruco_detected, U, Z):
 
         odom_rvec = np.array([[0.], [0.], [0.]])
         X_updated, P_updated, X_predicted = self.kf.kalman_filter(aruco_detected, U, Z, period)
@@ -46,9 +45,10 @@ class PositionUpdate:
         odom_tvec = np.array([[X_updated[0]], [X_updated[1]], np.array([initial])], dtype=np.float64).reshape(3, 1)
 
         # Convert odometry vectors to the appropriate format
-        odom_tvec = np.array(odom_tvec, dtype=np.float64).reshape(3, 1)
+        #odom_tvec = np.array(odom_tvec, dtype=np.float64).reshape(3, 1)
         odom_rvec = np.array(odom_rvec, dtype=np.float64).reshape(3, 1)
-        projected_points_odom, _ = cv2.projectPoints(marker_corners_3d, odom_rvec, odom_tvec, newcameramtx, dist)
+        print(self.marker_corners_3d, odom_rvec, odom_tvec, newcameramtx, dist)
+        projected_points_odom, _ = cv2.projectPoints(self.marker_corners_3d, odom_rvec, odom_tvec, newcameramtx, dist)
         projected_points_odom = projected_points_odom.reshape(-1, 2).astype(int)
 
         # Compute the center of the projected points
@@ -82,7 +82,7 @@ class PositionUpdate:
         if robot_detected:
 
             cv2.aruco.drawDetectedMarkers(img, [corners], np.array([marker_id]), (0, 255, 0))
-            center, projected_points, tvec_marker, rvec_marker, self.marker_centers, marker_corners_3d = Image_EKF.process_marker(
+            center, projected_points, tvec_marker, rvec_marker, self.marker_centers, self.marker_corners_3d = Image_EKF.process_marker(
                 corners, marker_id, 5, newcameramtx, dist, self.marker_centers)
             self.kf.Z[0] = tvec_marker[0][0]
             self.kf.Z[1] = tvec_marker[1][0]

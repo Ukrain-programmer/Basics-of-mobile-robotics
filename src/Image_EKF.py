@@ -8,7 +8,7 @@ class Image_EKF:
         pass
 
     @staticmethod
-    def initialize_camera_and_calibration(calibration_file='calibration.yaml', camera_index=1,
+    def initialize_camera_and_calibration(calibration_file='src/vision/calibration.yaml', camera_index=1,
                                           aruco_dict_type=cv2.aruco.DICT_6X6_1000):
 
         with open(calibration_file, 'r') as f:

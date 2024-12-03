@@ -1,6 +1,6 @@
 import math
 import time
-from ThymioController import ThymioController
+from src.motion_control.ThymioController import ThymioController
 from src.KalmanFilter import KalmanFilter
 
 
