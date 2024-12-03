@@ -60,10 +60,6 @@ class AStarNavigation:
         self.new_start = (int(start_y * self.ratio), int(start_x * self.ratio))
         self.new_goal = (int(goal_y * self.ratio), int(goal_x * self.ratio))
 
-        # Display the self.image
-        plt.imshow(self.image, cmap='gray')
-        plt.axis('off')
-        plt.show()
 
         # conversion for path planning
         self.image = np.where(self.image == 0, -1., self.image)
@@ -225,7 +221,7 @@ class AStarNavigation:
             # If we reach here, no path was found
             return None, explored, operation_count
 
-    def display_map(self, explored):
+    def display_map(self, explored, path):
         """
         Visualizes the map with obstacles, path, start, goal and explored cells
         
@@ -279,7 +275,7 @@ class AStarNavigation:
         if path:
             swapped_path = [(x, y) for y, x in self.path][::-1] # uniformize coordonate system
             print(f"{operation_count} operations to find the optimal path")
-            self.display_map(explored)
+            self.display_map(explored, path)
             return swapped_path 
         else:
             print("No path found.")
