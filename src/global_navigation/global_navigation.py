@@ -11,7 +11,7 @@ SAFETY = 5 # minimum distance from obstacles
 # Handles the global navigation tasks for the robot, including pathfinding and
 # avoiding static obstacles using A* algorithm for graph search 
 class AStarNavigation:
-    def __init__(self, file_path, safety):
+    def __init__(self, image, safety):
         """
         Initializes the navigation system with a map from vision module and a safety margin.
         
@@ -19,58 +19,22 @@ class AStarNavigation:
         - file_path: Path to the text file representing the environment map
         - safety: Minimum safe distance (in pixels) from obstacles.
         """
-        self.file_path = file_path # todo modifier pour que var
+        #self.file_path = file_path # todo modifier pour que var
+        self.image = image
         self.safety = safety
-        self.image = None
         self.start = None
         self.goal = None
         self.map_grid = None
         self.path = None
         self.ratio = None
 
-    def visualization_map_with_var(self, img_var):
-        """
-        Reads the environment map from the file, identifies start and goal,
-        visualizes the map, and prepares it for pathfinding.
-        """
-        # Load the text file and convert it to a image
-        self.image = img_var
-
-        # Find the coordinates of the first occurrence of the digit 2, 3
-        self.start = tuple(np.argwhere(self.image == 2)[0])
-        self.goal = tuple(np.argwhere(self.image == 3)[0])
-
-        # Replace all occurrences of the digit 2 and 3 with 0 for the map
-        self.image[self.start] = 0
-        self.image[self.goal] = 0
-
-        # conversion for display
-        self.image = np.where(self.image == 0, 255, self.image)
-        self.image = np.where(self.image == 1, 0, self.image)
-
-        # Resize the map while maintaining the aspect ratio
-        height, width = self.image.shape
-        self.ratio = NEW_WIDTH / width
-        new_height =  int(self.ratio * height)
-        self.image = cv2.resize(self.image, (NEW_WIDTH, new_height), interpolation=cv2.INTER_NEAREST)
-
-        # Update the start and goal positions after resizing
-        start_y, start_x = self.start
-        goal_y, goal_x = self.goal
-        self.new_start = (int(start_y * self.ratio), int(start_x * self.ratio))
-        self.new_goal = (int(goal_y * self.ratio), int(goal_x * self.ratio))
-
-
-        # conversion for path planning
-        self.image = np.where(self.image == 0, -1., self.image)
-        self.image = np.where(self.image == 255, 0., self.image)
     def visualization_map(self):
         """
         Reads the environment map from the file, identifies start and goal,
         visualizes the map, and prepares it for pathfinding.
         """
         # Load the text file and convert it to a image
-        self.image = np.loadtxt(self.file_path)
+        # self.image = np.loadtxt(self.file_path)
 
         # Find the coordinates of the first occurrence of the digit 2, 3
         self.start = tuple(np.argwhere(self.image == 2)[0])
@@ -187,16 +151,24 @@ class AStarNavigation:
                 (current_pos[0] - 1, current_pos[1]),  # Up
                 (current_pos[0] + 1, current_pos[1]),  # Down
                 (current_pos[0], current_pos[1] - 1),  # Left
-                (current_pos[0], current_pos[1] + 1)   # Right
+                (current_pos[0], current_pos[1] + 1),   # Right
+                (current_pos[0] - 1, current_pos[1] - 1),  # Up-Left
+                (current_pos[0] - 1, current_pos[1] + 1),  # Up-Right
+                (current_pos[0] + 1, current_pos[1] - 1),  # Down-Left
+                (current_pos[0] + 1, current_pos[1] + 1)   # Down-Right
             ]
     
             for neighbor in neighbors:
                 # Check if neighbor is within bounds and not an obstacle
                 if (0 <= neighbor[0] < self.map_grid.shape[0]) and (0 <= neighbor[1] < self.map_grid.shape[1]):
                     if self.map_grid[neighbor[0], neighbor[1]] != -1 and neighbor not in explored:
-                      
+                        # Determine cost for moving (diagonal or cardinal)
+                        step_cost = np.sqrt(2) if abs(neighbor[0] - current_pos[0]) == 1 and abs(neighbor[1] - current_pos[1]) == 1 else 1 #todo here
                         # Calculate tentative_g_cost
-                        tentative_g_cost = current_g_cost + 1 + self.map_grid[neighbor[0], neighbor[1]]
+                        tentative_g_cost = current_g_cost + step_cost + self.map_grid[neighbor[0], neighbor[1]] #todo here
+    
+                        # Calculate tentative_g_cost
+                        #tentative_g_cost = current_g_cost + 1 + self.map_grid[neighbor[0], neighbor[1]]
     
                         # If this self.path to neighbor is better than any previous one
                         if neighbor not in g_costs or tentative_g_cost < g_costs[neighbor]:
@@ -298,22 +270,14 @@ class AStarNavigation:
         self.new_start = (new_y, new_x)
         path, explored, operation_count = self.algo()
         return self.solution(path, explored, operation_count)
-
-    def new_path_with_var(self, image_var):
-        """
-        Executes the full path-finding pipeline
-        """
-        self.visualization_map_with_var(image_var)
-        self.map_grid = self.safety_distance()
-        path, explored, operation_count = self.algo()
-        return self.solution(path, explored, operation_count)
-
+        
 # calls
-# file = "images/merged_grid_map_6_8.txt"
-# navigator = AStarNavigation(file, SAFETY)
-# swapped_path = navigator.run()
-# print(swapped_path)
-# x, y = navigator.pixel_to_grid(200, 300)
-# print(x, y)
-# swapped_path = navigator.new_path(5, 20)
-# print(swapped_path)
+file_path = "images/merged_grid_map_6_8.txt"
+image = np.loadtxt(file_path)
+navigator = AStarNavigation(image, SAFETY)
+swapped_path = navigator.run()
+print(swapped_path)
+x, y = navigator.pixel_to_grid(200, 300)
+print(x, y)
+swapped_path = navigator.new_path(5, 20)
+print(swapped_path)
