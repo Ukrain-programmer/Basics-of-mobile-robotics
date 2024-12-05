@@ -21,19 +21,19 @@ class Image_EKF:
         aruco_dict = cv2.aruco.getPredefinedDictionary(aruco_dict_type)
         aruco_params = cv2.aruco.DetectorParameters()
 
-        # Initialize the camera
-        camera = cv2.VideoCapture(camera_index)
+        
+        camera = cv2.VideoCapture(0)
         if not camera.isOpened():
             raise RuntimeError("Error: Could not open the camera.")
 
-        # Read a frame to determine the image size
+       
         ret, img = camera.read()
         if not ret:
             raise RuntimeError("Error: Could not read from the camera.")
 
         h, w = img.shape[:2]
 
-        # Get the optimal camera matrix
+        
         newcameramtx, roi = cv2.getOptimalNewCameraMatrix(mtx, dist, (w, h), 1, (w, h))
 
         return camera, aruco_dict, aruco_params, newcameramtx, dist, mtx
@@ -98,7 +98,7 @@ class Image_EKF:
         
     @staticmethod
     def warp_and_transform(frame, width=60, height=80,point=None):
-        rect_corners = np.array([[125, 123], [544, 128], [582,340], [89, 343]], dtype=np.float32)
+        rect_corners = np.array([[137, 154],[485, 158],[517, 425],[ 98,424]], dtype=np.float32)
         # Define destination points for the flattened rectangle
         dst_corners = np.array([
             [0, 0],
@@ -117,9 +117,7 @@ class Image_EKF:
             point = np.array([point[0], point[1], 1], dtype=np.float32)  # Add z = 1 for homogeneity
             point_warped = np.dot(matrix, point)
             point_warped /= point_warped[2]  # Normalize to get 2D coordinates
-            # Draw the point on the warped image
             point_warped = tuple(map(int, point_warped[:2])) 
-            #cv2.circle(warped_image, point_warped[:2], radius=3, color=(255, 0, 255), thickness=5)  # Red dot
         
             return warped_image, point_warped[:2]  # Return x, y as 2D
         return warped_image 
