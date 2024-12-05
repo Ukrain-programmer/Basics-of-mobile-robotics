@@ -9,7 +9,7 @@ class ThymioController:
         """
         self.client = ClientAsync()
         self.node = None
-        # self.wheel_speed = [0, 0] #current wheel speed (left, right)
+
     def connect(self, timeout=5):
         """
         Connect to the Thymio robot by checking for available nodes, with a timeout.
@@ -42,8 +42,8 @@ class ThymioController:
         Set the motor speeds of the Thymio robot.
 
         Args:
-            left_speed (int): Speed for the left motor (-500 to 500).
-            right_speed (int): Speed for the right motor (-500 to 500).
+            left_speed (int): Speed for the left motor.
+            right_speed (int): Speed for the right motor.
         """
         if self.node:
             v = {
@@ -76,18 +76,6 @@ class ThymioController:
             self.client.close()
             print("Disconnected from Thymio.")
 
-
-
-    def turn_right(self, speed = 200):
-        self.set_speed(speed, -speed)
-        time.sleep(1.1)
-        self.stop()
-
-    def turn_left(self, speed = 200):
-        self.set_speed(-speed, speed)
-        time.sleep(1.1)
-        self.stop()
-
     def get_front_proximity(self):
         """
         Retrieve the current proximity sensor values as an array.
@@ -96,7 +84,6 @@ class ThymioController:
             list: An array of proximity sensor values [front_left, front_left_center, front_center, front_right_center, front_right],
                   or None if the Thymio is not connected.
         """
-        global leds_top, leds_bottom_left
         if self.node:
             self.client.process_waiting_messages()
             aw(self.node.wait_for_variables({"prox.horizontal"}))
@@ -112,7 +99,6 @@ class ThymioController:
         else:
             print("Thymio not connected. Please connect first.")
             return None
-
 
     def get_ground_proximity(self):
         """
@@ -135,7 +121,6 @@ class ThymioController:
             print("Thymio not connected. Please connect first.")
             return None
 
-
     def get_speed(self):
         """
         Retrieve the current motor speeds as an array.
@@ -155,21 +140,3 @@ class ThymioController:
         else:
             print("Thymio not connected. Please connect first.")
             return None
-
-
-
-
-
-
-
-
-if __name__ == "__main__":
-    try:
-        thymio = ThymioController()
-        thymio.connect(timeout=5)
-
-        v = thymio.get_ground()
-        thymio.turn_right(200)
-
-    finally:
-        thymio.disconnect()

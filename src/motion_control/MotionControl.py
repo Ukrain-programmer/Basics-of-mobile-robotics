@@ -71,12 +71,10 @@ class MotionControl:
 
         if abs(angle_difference) > ANGLE_THRESHOLD:
             turn_factor = angle_difference / np.pi  # Normalized factor between 0 and 1
-            # Turn left
-            if angle_difference > -2.5:
+            if angle_difference > -2.5: # Turn left
                 left_speed = self.base_speed + (60 * turn_factor)
                 right_speed = self.base_speed - (40 * turn_factor)
 
                 self.thymio.set_speed(int(left_speed), int(right_speed))
             else:
-                # Move straight to target
-                self.thymio.set_speed(self.base_speed, self.base_speed)
+                self.thymio.set_speed(self.base_speed, self.base_speed) # Move straight to target
