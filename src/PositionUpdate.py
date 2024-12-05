@@ -44,10 +44,7 @@ class PositionUpdate:
         yaw = X_updated[2]
         odom_tvec = np.array([[X_updated[0]], [X_updated[1]], np.array([initial])], dtype=np.float64).reshape(3, 1)
 
-        # Convert odometry vectors to the appropriate format
-        #odom_tvec = np.array(odom_tvec, dtype=np.float64).reshape(3, 1)
         odom_rvec = np.array(odom_rvec, dtype=np.float64).reshape(3, 1)
-        print(self.marker_corners_3d, odom_rvec, odom_tvec, newcameramtx, dist)
         projected_points_odom, _ = cv2.projectPoints(self.marker_corners_3d, odom_rvec, odom_tvec, newcameramtx, dist)
         projected_points_odom = projected_points_odom.reshape(-1, 2).astype(int)
 
@@ -59,8 +56,6 @@ class PositionUpdate:
     @staticmethod
     def euler_from_rvec(rvec):
         R, _ = cv2.Rodrigues(rvec)
-
-        # Calculate Euler angles (roll, pitch, yaw)
         pitch = np.arctan2(R[2, 0], np.sqrt(R[0, 0] ** 2 + R[1, 0] ** 2))
         roll = np.arctan2(R[2, 1], R[2, 2])
         yaw = np.degrees(np.arctan2(R[1, 0], R[0, 0]))
@@ -75,7 +70,6 @@ class PositionUpdate:
         self.current_time = time.time()
         img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
-        # Undistort the image
         undistorted = cv2.undistort(img_gray, mtx, dist, None, newcameramtx)
         corners, marker_id, robot_detected = Image_EKF.detect_marker_with_id(undistorted, aruco_dict, aruco_params,
                                                                              target_id=5)
