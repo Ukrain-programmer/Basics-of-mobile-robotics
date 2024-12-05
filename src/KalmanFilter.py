@@ -12,12 +12,10 @@ class KalmanFilter:
         self.theta=0
 
     def prediction_step(self, period):
-
         if period < 0.01:
-            dt = 0.01 * self.conversion_factor/2
+            dt = 0.01 * self.conversion_factor
             time.sleep(0.01-period)
-        else:
-            dt = period * self.conversion_factor/2
+        dt = period * self.conversion_factor/2
 
         A = np.eye(3)
         theta = self.X[2]
@@ -43,7 +41,7 @@ class KalmanFilter:
         # Measurement matrix
         H = np.eye(3) if aruco_detected else np.zeros((3, 3))
 
-        # Innovation (difference between measurement and prediction)
+        # Innovation 
         I = Z - np.dot(H, self.X)
 
         # Innovation covariance
