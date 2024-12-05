@@ -1,130 +1,82 @@
-import time
+import numpy as np
+from src.Constants import DISTANCE_THRESHOLD, WAYPOINT_STEP_SIZE, ANGLE_THRESHOLD
+from src.motion_control.ThymioController import ThymioController
 
-from ThymioController import ThymioController
-from LocalNavigator import LocalNavigator
 
 class MotionControl:
     def __init__(self, thymio_controller, global_path):
         """
-        Initialize the MotionControl class.
+        Initialize the motion control system for the robot.
 
         Args:
-            thymio_controller (ThymioController): An instance of ThymioController.
-            global_path (list of tuples): The global navigation path as a list of (x, y) waypoints.
+            thymio_controller (ThymioController): An instance of the ThymioController class to control the robot's motors.
+            global_path (list): A list of waypoints representing the robot's path.
         """
         self.thymio = thymio_controller
         self.path = global_path
-        self.current_position = global_path[0]
-        self.setup_orientation()  # Start facing +X (0 degrees)
-        self.local_navigator = LocalNavigator(thymio_controller)
-        self.duration = 1
-        self.speed = 150
+        self.path_iterator = 12  # First step
+        self.base_speed = 40
+        self.current_x, self.current_y, self.current_theta = 0, 0, 0
 
-    def setup_orientation(self):
-        if len(self.path) > 1:  # Ensure there are at least two waypoints
-            x1, y1 = self.path[0]
-            x2, y2 = self.path[1]
-
-            if x2 > x1:
-                self.current_orientation = 0  # Facing +X
-            elif x2 < x1:
-                self.current_orientation = 180  # Facing -X
-            elif y2 > y1:
-                self.current_orientation = 90  # Facing +Y
-            elif y2 < y1:
-                self.current_orientation = 270  # Facing -Y
-        else:
-            self.current_orientation = 0
-    def calculate_target_orientation(self, target_position):
+    def setup_position(self, current_pos):
         """
-        Calculate the target orientation based on the next waypoint.
-        """
-        x1, y1 = self.current_position
-        x2, y2 = target_position
-
-        if x2 < x1:  # Moving right (+X)
-            return 0
-        elif x2 > x1:  # Moving left (-X)
-            return 180
-        elif y2 > y1:  # Moving up (+Y)
-            return 90
-        elif y2 < y1:  # Moving down (-Y)
-            return 270
-
-    def align_to_target_orientation(self, target_orientation):
-        """
-        Align the robot's orientation to the target orientation using 90-degree turns.
-        """
-        angle_difference = (target_orientation - self.current_orientation) % 360
-
-        if angle_difference == 90:  # Turn right
-            self.thymio.turn_right()
-            self.current_orientation = (self.current_orientation + 90) % 360
-        elif angle_difference == 270:  # Turn left
-            self.thymio.turn_left()
-            self.current_orientation = (self.current_orientation - 90) % 360
-        elif angle_difference == 180:
-            print(f"Unexpected 180-degree rotation required.")
-        else:
-            print("Already facing the correct direction.")
-
-    def move_to_target(self, target_position):
-        """
-        Move the robot to the target position, avoiding obstacles if necessary.
+        Setup the robot's current position and orientation.
 
         Args:
-            target_position (tuple): The target (x, y) position.
+            current_pos (tuple): A tuple containing the current x, y, and theta (orientation) values.
         """
-        print(f"Moving to target: {target_position}")
-        end_time = time.time() + self.duration
-        while time.time() < end_time:
-            # Check for obstacles
-            if self.local_navigator.obstacle_detect():
-                self.thymio.stop()
-                self.local_navigator.handle_obstacle()
+        self.current_x, self.current_y, self.current_theta = current_pos[0], current_pos[1], current_pos[2]
+
+    def setup_new_path(self, path, theta):
+        """
+        Set a new path for the robot to follow and reset the path iterator.
+
+        Args:
+            path (list): A new list of waypoints for the robot to follow.
+            theta (float): The new orientation (theta) of the robot.
+        """
+        self.path = path
+        self.path_iterator = 0
+        self.current_x, self.current_y, self.current_theta = path[0][0], path[0][1], theta
+
+    def move_to_target(self, target_position, current_position: list):
+        """
+        Move the robot towards the target position by calculating the distance and adjusting its speed and orientation.
+
+        Args:
+            target_position (tuple): The x and y coordinates of the target position.
+            current_position (list): The current position and orientation of the robot (x, y, theta).
+        """
+        target_x, target_y = target_position
+        self.current_x, self.current_y = current_position[0], current_position[1]
+        self.current_theta = current_position[2]
+
+        # Calculate distance to target
+        distance_to_target = np.sqrt((self.current_x - target_x) ** 2 + (self.current_y - target_y) ** 2)
+
+        if distance_to_target < DISTANCE_THRESHOLD:
+            self.path_iterator += WAYPOINT_STEP_SIZE
+            return
+
+        # Check if the robot is close to the last point in the path
+        if np.sqrt((self.current_x - self.path[-1][0]) ** 2 + (self.current_y - self.path[-1][1]) ** 2) < 120:
+            self.path_iterator += 1000
+
+        # Calculate the angle to the target
+        angle_to_target = np.arctan2(target_y - self.current_y, target_x - self.current_x)
+        angle_difference = angle_to_target - self.current_theta
+
+        # Normalize angle difference to [-pi, pi]
+        angle_difference = (angle_difference + np.pi) % (2 * np.pi) - np.pi
+
+        if abs(angle_difference) > ANGLE_THRESHOLD:
+            turn_factor = angle_difference / np.pi  # Normalized factor between 0 and 1
+            # Turn left
+            if angle_difference > -2.5:
+                left_speed = self.base_speed + (60 * turn_factor)
+                right_speed = self.base_speed - (40 * turn_factor)
+
+                self.thymio.set_speed(int(left_speed), int(right_speed))
             else:
-                # No obstacle, move forward
-                self.thymio.set_speed(self.speed, self.speed)
-
-            time.sleep(0.1)  # Sampling delay
-
-        # self.thymio.stop()
-        self.current_position = target_position  # Update position (simulated)
-
-    def execute_path(self):
-        """
-        Execute the path by moving through waypoints.
-        """
-        for i in range(len(self.path) - 1):
-            target_position = self.path[i + 1]
-
-            # Calculate target orientation
-            target_orientation = self.calculate_target_orientation(target_position)
-
-            # Align to target orientation
-            self.align_to_target_orientation(target_orientation)
-
-            # Move to the target position
-            self.move_to_target(target_position)
-
-            print(f"Reached waypoint: {target_position}")
-
-        self.thymio.stop()
-        print("Path execution complete.")
-
-
-
-
-
-if __name__ == "__main__":
-    thymio = ThymioController()
-    path = [(29, 16), (29, 17), (29, 18), (29, 19), (29, 20), (29, 21), (29, 22), (29, 23), (30, 23), (31, 23), (32, 23), (33, 23), (34, 23), (35, 23), (36, 23), (36, 24), (37, 24), (38, 24), (38, 25), (39, 25), (39, 26), (39, 27), (40, 27), (40, 28), (40, 29), (40, 30), (40, 31), (40, 32), (40, 33), (40, 34), (40, 35), (40, 36), (41, 36), (42, 36), (43, 36), (44, 36), (45, 36), (46, 36), (47, 36), (48, 36), (49, 36), (50, 36), (51, 36), (52, 36), (53, 36), (54, 36), (55, 36), (56, 36), (57, 36), (58, 36), (59, 36), (60, 36), (61, 36), (62, 36), (63, 36), (64, 36), (65, 36), (66, 36), (67, 36), (68, 36), (69, 36)]
-    try:
-        # Define path (list of waypoints)
-        #path = [(19, 1), (20, 1), (21, 1), (21, 2), (21, 3), (21, 4)]
-        thymio.connect(timeout=5)
-        motion_control = MotionControl(thymio, path)
-        motion_control.execute_path()
-
-    finally:
-        thymio.disconnect()
+                # Move straight to target
+                self.thymio.set_speed(self.base_speed, self.base_speed)
